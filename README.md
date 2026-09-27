@@ -4,7 +4,7 @@
 
 ### Redmi Note 11T 5G · Redmi Note 11 5G · POCO M4 Pro 5G (India)
 
-**MediaTek Dimensity 810 (MT6833P) · 6 nm · Virtual A/B · FBE + metadata decryption**
+**MediaTek Dimensity 810 (MT6833P) · 6 nm · Virtual A/B · FBE flags enabled**
 
 [![Branch](https://img.shields.io/badge/branch-fox__12.1-0073b5?style=flat-square&logo=git&logoColor=white)](https://github.com/yeasinulhoquetuhin/OrangeFox-evergo/tree/fox_12.1)
 [![License](https://img.shields.io/badge/license-Apache--2.0-0073b5?style=flat-square&logo=apache&logoColor=white)](https://www.apache.org/licenses/LICENSE-2.0)
@@ -14,8 +14,14 @@
 [![Last Commit](https://img.shields.io/github/last-commit/yeasinulhoquetuhin/OrangeFox-evergo?style=flat-square&logo=github&logoColor=white)](https://github.com/yeasinulhoquetuhin/OrangeFox-evergo/commits/fox_12.1)
 [![Size](https://img.shields.io/github/repo-size/yeasinulhoquetuhin/OrangeFox-evergo?style=flat-square&logo=github&logoColor=white)](https://github.com/yeasinulhoquetuhin/OrangeFox-evergo)
 
-Device tree for **[OrangeFox Recovery](https://github.com/OrangeFoxRecovery) R11.1** on the MediaTek
-MT6833P platform. Virtual A/B, full FBE decryption, AVB aware.
+Device tree for the **Redmi Note 11T 5G** (`evergo`) on the MediaTek MT6833P platform, carrying
+OrangeFox R11.1 variables. Virtual A/B, FBE flags enabled, AVB aware.
+
+> [!CAUTION]
+> This is a **source tree only**. No prebuilt recovery is published here, and no build of it has
+> been verified. It also inherits TWRP product makefiles rather than OrangeFox ones, so it will
+> not build an OrangeFox recovery as-is — see
+> [What this tree really builds](#what-this-tree-really-builds).
 
 **Maintainer:** [Yeasinul Hoque Tuhin](https://github.com/yeasinulhoquetuhin) — [tuhinbro.com](https://tuhinbro.com) · [Telegram: @TuhinBroh](https://t.me/TuhinBroh)
 
@@ -167,8 +173,10 @@ This matters for a recovery: an unpatched stock OS is a patched-attack-surface s
 
 ### Correctness
 
-- Full FBE decryption — `TW_INCLUDE_CRYPTO`, `TW_INCLUDE_CRYPTO_FBE` and
-  `TW_INCLUDE_FBE_METADATA_DECRYPT` all enabled, including Android 13 metadata blobs.
+- FBE flags enabled in the tree — `TW_INCLUDE_CRYPTO`, `TW_INCLUDE_CRYPTO_FBE` and
+  `TW_INCLUDE_FBE_METADATA_DECRYPT` are all `true` in `BoardConfig.mk`. Note the `twrp-12.1`
+  manifest states FDE decryption is **not presently supported** on that branch, so a build from it
+  will not actually decrypt `/data` regardless of these flags.
 - AVB aware — `vbmeta`, `vbmeta_system` and `vbmeta_vendor` are exposed for selective
   re-patching.
 - Dynamic partitions sized correctly at **9 126 805 504** bytes and mirrored in
@@ -360,20 +368,62 @@ Present only in `twrp.flags`, which drives the Wipe/Flash GUI rather than the mo
 
 ---
 
+## What this tree really builds
+
+This tree is a hybrid, and the naming does not describe it accurately. Reading the makefiles:
+
+| File | What it says |
+| :--- | :--- |
+| `vendorsetup.sh` | Sets ~40 `OF_*` / `FOX_*` variables, `FOX_VERSION="R11.1_0"`, `FOX_VARIANT="S"`, `OF_MAINTAINER="Sushrut1101"` |
+| `twrp_evergo.mk` | Inherits `product/core_64_bit.mk`, `product/aosp_base.mk` and **`vendor/twrp/config/common.mk`** |
+| `AndroidProducts.mk` | Registers `twrp_evergo-eng` |
+| `PRODUCT_MODEL` | `Redmi Note 11T 5G` |
+
+So the tree carries **OrangeFox branding and variables**, but its product makefiles inherit
+**TWRP**, not OrangeFox's recovery products. The `OF_*` and `FOX_*` variables in `vendorsetup.sh`
+are only read by OrangeFox's own build scripts — and those scripts are not published for Android
+12 (see the note in [Building from Source](#building-from-source)).
+
+Practically this means:
+
+- Building with the `twrp-12.1` manifest produces a **TWRP** recovery for `evergo`. The OrangeFox
+  variables are inert.
+- You cannot reproduce an OrangeFox R11.1 build from this tree alone. Doing so needs OrangeFox's
+  recovery source and build tooling, which do not exist publicly for 12.1.
+- The device configuration itself — partitions, fstab, BoardConfig, screen geometry, the
+  `twrp.flags` partition list — is complete and usable regardless.
+
+> [!NOTE]
+> **No binary release.** This repository contains no prebuilt recovery, and no build of this tree
+> has been verified. Treat it as a source tree to be compiled by whoever wants to try it.
+
+---
+
 ## Building from Source
+
+> [!IMPORTANT]
+> **There is no official OrangeFox 12.1 build.** The OrangeFox project publishes a manifest only
+> for R6.0 — [`fox-6.0_manifest`](https://github.com/OrangeFoxRecovery/fox-6.0_manifest) on branch
+> `fox_6.0`, last touched December 2021, and it builds against OmniROM's recovery tree. There is
+> no `fox-12.1` manifest, no OrangeFox `build.sh`, and no published `buildspec` for Android 12.
+>
+> The commands below therefore build this tree against the **TWRP `twrp-12.1` minimal manifest**,
+> which is the manifest this tree is actually written for. See
+> [What this tree really builds](#what-this-tree-really-builds) for what that means in practice.
 
 ### 1. Host requirements
 
+Recovery-only build (`mka recoveryimage`), not a full system build.
+
 | Resource | Minimum | Recommended |
 | :--- | :--- | :--- |
-| RAM | 16 GB | 32 GB (add 8–16 GB swap) |
-| Disk | 300 GB | 500 GB, SSD |
+| RAM | 16 GB | 32 GB (add 16 GB swap) |
+| Disk | 100 GB | 200 GB, SSD |
 | CPU | 8 threads | 16+ threads |
-| OS | Ubuntu 20.04 / 22.04 / 24.04 LTS | Ubuntu 22.04 or 24.04 LTS |
+| OS | Ubuntu 22.04 LTS | Ubuntu 22.04 or 24.04 LTS |
 
 > [!TIP]
-> Build on an SSD — on a spinning disk a four-hour build becomes an all-day one. If
-> RAM-bound, put swap on the same SSD:
+> Build on an SSD. If RAM-bound, put swap on the same SSD:
 > ```bash
 > sudo fallocate -l 16G /swapfile && sudo chmod 600 /swapfile
 > sudo mkswap /swapfile && sudo swapon /swapfile
@@ -388,8 +438,8 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y \
   bc bison build-essential ccache curl flex g++-multilib gcc-multilib git git-lfs \
   gnupg gperf imagemagick lib32readline-dev lib32z1-dev libelf-dev liblz4-tool \
-  libncurses5-dev libncurses-dev libpng-dev libssl-dev libxml2-dev libxml2-utils \
-  lzop m4 make pngcrush python3 rsync schedtool squashfs-tools syslinux-utils \
+  libncurses-dev libpng-dev libssl-dev libxml2-dev libxml2-utils \
+  lzop m4 make python3 rsync squashfs-tools syslinux-utils \
   unzip xz-utils zlib1g-dev cpio lz4
 
 git config --global user.name  "Your Name"
@@ -397,62 +447,67 @@ git config --global user.email "you@example.com"
 git config --global core.longpaths true
 ```
 
+> [!NOTE]
+> `libncurses5-dev`, `pngcrush` and `schedtool` are dropped from the usual Android list. The
+> first does not exist on Ubuntu 22.04 or 24.04 (`libncurses-dev` covers it); the other two are
+> pre-Android-10 leftovers that TWRP 12.1 does not use.
+
 ### 3. Sync the sources
 
 ```bash
-mkdir -p ~/android/lineage && cd ~/android/lineage
+mkdir -p ~/android/twrp && cd ~/android/twrp
 
-repo init -u https://github.com/OrangeFoxRecovery/platform_manifest.git \
-          -b fox-12.1 --depth=1
+repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git \
+          -b twrp-12.1 --depth=1
 
 repo sync -c -j8 --no-clone-bundle --current-branch
 ```
 
 ### 4. Place this tree
 
-The build expects the tree at `device/xiaomi/evergo`, which is what `BoardConfig.mk` sets as
-`DEVICE_PATH`.
+The build expects the tree at `device/xiaomi/evergo`.
 
 ```bash
+cd ~/android/twrp
 git clone -b fox_12.1 \
   https://github.com/yeasinulhoquetuhin/OrangeFox-evergo.git \
   device/xiaomi/evergo
 ```
 
+`AndroidProducts.mk` registers exactly one lunch target, so this is the only product to select:
+
+```
+COMMON_LUNCH_CHOICES := twrp_evergo-eng
+```
+
 ### 5. Build
 
 ```bash
-cd ~/android/lineage
+cd ~/android/twrp
+export ALLOW_MISSING_DEPENDENCIES=true
 source build/envsetup.sh
+lunch twrp_evergo-eng
 
-./build.sh evergo
+mka recoveryimage
 ```
 
-The build script asks for the variant — accept the default (`S`). Fully non-interactive:
-
-```bash
-./build.sh evergo S
-```
+`mka recoveryimage` is the target for a device with a dedicated `recovery` partition. For a
+device whose stock recovery lives in the boot ramdisk the target would be `mka bootimage`, and
+`mka vendorbootimage` for vendor_boot — this one is the first case.
 
 <details>
 <summary>Other useful invocations</summary>
 
 ```bash
-# Clean, then full rebuild
-./build.sh evergo clean
-./build.sh evergo
+# Clean, then rebuild
+mka clean
+mka recoveryimage
 
-# Supply your own Magisk zip
-export FOX_USE_SPECIFIC_MAGISK_ZIP=~/Magisk/Magisk-v25.2.zip
-./build.sh evergo
+# Build only this module, much faster for iteration
+mmm device/xiaomi/evergo/recovery/
 
-# Keep a verbose build log
-export FOX_BUILD_LOG_FILE=~/fox-build.log
-./build.sh evergo
-
-# Cap parallelism
-export FOX_BUILD_MAXIMUM_JOBS=16
-./build.sh evergo
+# A full `mka twrp_evergo-eng` builds the whole image tree, not just recovery
+mka twrp_evergo-eng
 ```
 
 </details>
@@ -465,19 +520,18 @@ ls -lh out/target/product/evergo/
 
 | Artefact | Path |
 | :--- | :--- |
-| Flashable ZIP | `out/target/product/evergo/*.zip` |
-| Unpacked recovery | `out/target/product/evergo/recovery.img` |
+| Recovery image | `out/target/product/evergo/recovery.img` |
+| Packaged ZIP | `out/target/product/evergo/*.zip` |
+| Build log | `out/target/product/evergo/*.log` |
 | Boot image | `out/target/product/evergo/boot.img` |
 | Build log | `out/target/product/evergo/*.log` |
 
-The output directory is keyed off `PRODUCT_DEVICE` (`evergo`), not `PRODUCT_NAME`
-(`twrp_evergo`) — the latter is a historical artefact of the TWRP-style product makefile this
-tree inherited, and does not mean you are building TWRP.
+The output directory is keyed off `PRODUCT_DEVICE` (`evergo`) in `twrp_evergo.mk`, not
+`PRODUCT_NAME` (`twrp_evergo`). The `_twrp_` prefix in the lunch target is the TWRP naming
+convention that the `twrp-12.1` manifest requires — see the note above.
 
-The ZIP filename is generated by OrangeFox's `build.sh` from `FOX_VERSION` and `FOX_VARIANT`, so
-it contains `R11.1_0` and `S` in some order. Check the real name with `ls`.
-
-Copy the ZIP off the build machine — that is the file you flash.
+`mka recoveryimage` produces `recovery.img` and a packaged ZIP. Copy the ZIP off the build
+machine — that is the file you flash.
 
 ---
 
@@ -635,7 +689,7 @@ Every value OrangeFox reads comes from `vendorsetup.sh`. The load-bearing ones:
 | Symptom | Likely cause | Fix |
 | :--- | :--- | :--- |
 | Bootloops back to fastboot | `vbmeta` mismatch after patching | Flash stock `vbmeta*`, or skip the patch step for those partitions |
-| `/data` will not mount, "decryption failed" | Metadata blobs too new | Android 13 blobs are included. If it still fails, the device is on an unsupported encryption version |
+| `/data` will not mount, "decryption failed" | The base tree does not implement FDE | Expected on a `twrp-12.1` build — that manifest states FDE decryption is not presently supported. A wipe will be required |
 | Black screen, recovery is running | Brightness at 0 after wipe | `echo 1200 > /sys/class/leds/lcd-backlight/brightness` |
 | Wrong internal-storage size | `OF_DYNAMIC_FULL_SIZE` desynced | Re-sync with `BoardConfig.mk` |
 | `fastboot boot` fails silently | Expected | `TW_NO_FASTBOOT_BOOT` is correct. Flash to `recovery` instead |
@@ -654,11 +708,12 @@ cat /proc/cmdline
 ls /sys/class/leds/
 ```
 
-Build-time diagnostics:
+Build-time diagnostics — `vendorsetup.sh` dumps the tree's own variables into this file when it is
+set, so it works with either build system:
 
 ```bash
 export FOX_BUILD_LOG_FILE=~/fox-build.log
-./build.sh evergo
+mka recoveryimage
 grep -E '^(FOX|OF_|TARGET_|TW_)' ~/fox-build.log
 ```
 
