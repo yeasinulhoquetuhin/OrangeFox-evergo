@@ -63,7 +63,7 @@ lets the generic OrangeFox Recovery source compile into a bootable image for the
 | | |
 | :--- | :--- |
 | **Recovery** | OrangeFox R11.1, variant `S` |
-| **Platform** | `mt6833` (MediaTek Dimensity 700) |
+| **Platform** | `mt6833P` (MediaTek Dimensity 810) |
 | **Target OS level** | Android 12 (S) — VNDK 31, shipping API level 30 |
 | **Update model** | Virtual A/B + dynamic partitions |
 | **Encryption** | FBE / metadata encryption, `v2+inlinecrypt_optimized` |
@@ -100,7 +100,7 @@ evergo, evergreen, opal
 ```
 
 > [!WARNING]
-> Do **not** attempt this tree on `spes`, `spesn`, `apollo`, `muni` or any other MT6833 Redmi
+> Do **not** attempt this tree on `spes`, `spesn`, `apollo`, `muni` or any other MT6833P Redmi
 > board. The `bootctrl` HAL and the ramdisk overlay are specific to this board's UFS boot-region
 > layout.
 
@@ -110,7 +110,7 @@ evergo, evergreen, opal
 
 | Category | Specification |
 | :--- | :--- |
-| **SoC** | MediaTek Dimensity 700 (`MT6833`), 8 nm |
+| **SoC** | MediaTek Dimensity 810 (`MT6833P`), 6 nm |
 | **CPU** | 8 × ARM Cortex-A55 (2 × 2.2 GHz big + 6 × 2.0 GHz little) |
 | **GPU** | ARM Mali-G57 MC2 |
 | **Display** | 6.6″ AMOLED, 1080 × 2400 (FHD+), 90 Hz, HDR10 |
